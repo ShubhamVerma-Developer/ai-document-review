@@ -1,0 +1,35 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API",
+      "request": "launch",
+      "module": "uvicorn",
+      "type": "debugpy",
+      "args": ["main:app", "--reload", "--host", "localhost", "--port", "8000"],
+      "cwd": "${workspaceFolder}/app/api",
+      "env": {
+        "SERVE_STATIC": "False"
+      }
+    },
+    {
+      "name": "UI",
+      "request": "launch",
+      "type": "chrome",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/app/ui",
+      "preLaunchTask": "npm: start - ui",
+      "sourceMaps": true,
+      "trace": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "App (UI & API)",
+      "configurations": ["UI", "API"]
+    }
+  ]
+}

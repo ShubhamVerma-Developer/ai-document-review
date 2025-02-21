@@ -1,0 +1,19 @@
+name: Setup
+description: Installs Task and Dependencies
+inputs:
+  repo-token:
+    required: true
+    description: GitHub token for repository
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.x
+        repo-token: ${{ inputs.repo-token }}
+
+    - name: Install Dependencies
+      id: deps-install
+      run: task deps-install
+      shell: bash

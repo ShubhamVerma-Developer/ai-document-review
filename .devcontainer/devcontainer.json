@@ -1,0 +1,31 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "features": {
+    "ghcr.io/ljtill/features/task:latest": {
+      "version": "3.41.0"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azure-devops.azure-pipelines",
+        "github.vscode-github-actions",
+        "esbenp.prettier-vscode",
+        "github.copilot",
+        "github.copilot-chat",
+        "redhat.vscode-yaml",
+        "task.vscode-task",
+        "hashicorp.terraform",
+        "dbaeumer.vscode-eslint",
+        "prompt-flow.prompt-flow",
+        "ms-python.python"
+      ],
+      "settings": {
+        "yaml.schemas": {
+          "https://taskfile.dev/schema.json": ["**/Taskfile.yml", ".task/**"]
+        }
+      }
+    }
+  },
+  "postCreateCommand": "task deps-install"
+}

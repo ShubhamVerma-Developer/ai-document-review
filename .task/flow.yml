@@ -1,0 +1,158 @@
+version: "3.41.0"
+
+tasks:
+  flow-create-review:
+    desc: Upload and create flows in AI Foundry.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fd
+    dir: flows
+    cmds:
+      - |
+          NAME_ARGUMENT={{if .FLOW_NAME}}"--set display_name="{{.FLOW_NAME}}{{else}}{{end}}
+          pushd ../infra
+          RESOURCE_GROUP=$(terraform output -raw resource_group)
+          APP_NAME=$(terraform output -raw webapp_name)
+          popd
+
+          cp -a ../common "ai_doc_review/common"
+
+          pfazure flow create \
+            --flow ai_doc_review \
+            --workspace-name "$AI_HUB_PROJECT_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            $NAME_ARGUMENT
+
+  flow-create-agent:
+    desc: Deploy agent flows to AI Foundry.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fda
+    dir: flows
+    cmds:
+      - |
+          NAME_ARGUMENT={{if .FLOW_NAME}}"--set display_name="{{.FLOW_NAME}}{{else}}{{end}}
+          pushd ../infra
+          RESOURCE_GROUP=$(terraform output -raw resource_group)
+          AI_HUB_PROJECT_NAME=$(terraform output -raw ai_hub_project_name)
+          popd
+
+          pfazure flow create \
+            --flow ai_doc_review/agent_template \
+            --workspace-name "$AI_HUB_PROJECT_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            $NAME_ARGUMENT
+
+  flow-create-eval:
+    desc: Deploy evaluation flows to AI Foundry.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fde
+    dir: flows
+    cmds:
+      - |
+          NAME_ARGUMENT={{if .FLOW_NAME}}"--set display_name="{{.FLOW_NAME}}{{else}}{{end}}
+          pushd ../infra
+          RESOURCE_GROUP=$(terraform output -raw resource_group)
+          AI_HUB_PROJECT_NAME=$(terraform output -raw ai_hub_project_name)
+          popd
+
+          pfazure flow create \
+            --flow ai_doc_review_eval \
+            --workspace-name "$AI_HUB_PROJECT_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --set type=evaluation
+            $NAME_ARGUMENT
+
+  flow-build:
+    desc: Build flow artifacts.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fb
+    dir: flows
+    cmds:
+      - |
+        echo -e "\033[0;32mBuilding flow artifacts...\033[0m"
+        python3 -m venv .venv
+        .venv/bin/pip3 install -r requirements.txt
+        .venv/bin/pip3 install -r ./ai_doc_review/requirements.txt
+        .venv/bin/pip3 install -r ./ai_doc_review_eval/requirements.txt
+        .venv/bin/pip3 install keyrings.alt
+
+  flow-clean:
+    desc: Remove flow artifacts.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fb
+    dir: flows
+    cmds:
+      - |
+        echo -e "\033[0;32mRemoving flow artifacts...\033[0m"
+        rm -rf .venv
+        rm -rf ai_doc_review/common
+
+  flow-deploy:
+    desc: Deploy flow endpoint to App Service.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fde
+    dir: flows
+    cmds:
+      - cmd: |
+          echo -e "\033[0;32mUploading flow...\033[0m"
+          TEMP_DIR=$(mktemp -d)
+          trap "rm -rf $TEMP_DIR" EXIT
+
+          cp -a ai_doc_review "$TEMP_DIR/"
+          rm -rf "$TEMP_DIR/ai_doc_review/common"
+          cp -a ../common "$TEMP_DIR/ai_doc_review/common"
+          pushd $TEMP_DIR/ai_doc_review
+          zip -q -r --symlinks "$TEMP_DIR/flow.zip" *
+          popd
+
+          pushd ../infra
+          RESOURCE_GROUP=$(terraform output -raw resource_group)
+          FLOW_NAME=$(terraform output -raw flowapp_name)
+          popd
+
+          ZIP_PATH="$TEMP_DIR/flow.zip"
+          az webapp deploy \
+            -g $RESOURCE_GROUP \
+            -n $FLOW_NAME \
+            --src-path "$ZIP_PATH" \
+            --type zip
+
+  flow-run:
+    desc: Launch local flow instance.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - fr
+    dir: flows/ai_doc_review
+    cmds:
+      - |
+        echo -e "\033[0;32mLaunching flow...\033[0m"
+        pf flow serve --source ./ --port 8080 --host localhost
+
+  flow-logs:
+    desc: Show logs for ML endpoint.
+    silent: true
+    aliases:
+      - fle
+    dir: infra
+    cmds:
+      - |
+        az webapp log tail --name $(terraform output -raw flowapp_name) --resource-group $(terraform output -raw resource_group)

@@ -1,0 +1,69 @@
+version: "3.41.0"
+
+tasks:
+  infra-init:
+    desc: Initialize resources.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ii
+    dir: infra
+    cmds:
+      - |
+        echo -e "\033[0;32mInitialising Terraform...\033[0m"
+        terraform init
+
+  infra-plan:
+    desc: Plan infrastructure changes.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ip
+    dir: infra
+    cmds:
+      - |
+        echo -e "\033[0;32mPlanning changes...\033[0m"
+        terraform plan -var-file=environments/local.tfvars
+
+  infra-deploy:
+    desc: Deploy infrastructure.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ia
+    dir: infra
+    cmds:
+      - |
+        echo -e "\033[0;32mApplying changes...\033[0m"
+        terraform apply -var-file=environments/local.tfvars -auto-approve
+
+  infra-destroy:
+    desc: Destroy infrastructure.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - id
+    dir: infra
+    cmds:
+      - |
+        echo -e "\033[0;32mDestroying resources...\033[0m"
+        terraform destroy -var-file=environments/local.tfvars -auto-approve
+
+  infra-clean:
+    desc: Remove infrastructure artifacts.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ic
+    dir: infra
+    cmds:
+      - |
+        echo -e "\033[0;32mRemoving infrastructure artifacts...\033[0m"
+        rm -rf .terraform
+        rm -f terraform.tfstate
+        rm -f terraform.tfstate.backup

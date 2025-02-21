@@ -1,0 +1,102 @@
+version: "3.41.0"
+
+tasks:
+  app-build:
+    desc: Build application components.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ab
+    dir: app
+    cmds:
+      - |
+        echo -e "\033[0;32mBuilding API...\033[0m"
+        pushd api/
+        python3 -m venv .venv
+        .venv/bin/pip3 install -r requirements.txt
+        popd
+
+        echo -e "\033[0;32mBuilding UI...\033[0m"
+        pushd ui/
+        npm install --no-fund --no-audit
+        npm run build
+        popd
+
+  app-clean:
+    desc: Remove build artifacts.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ac
+    dir: app
+    cmds:
+      - |
+        echo -e "\033[0;32mRemoving API artifacts...\033[0m"
+        pushd app/api
+        rm -rf .venv
+        rm -rf www
+        popd
+
+        echo -e "\033[0;32mRemoving UI artifacts...\033[0m"
+        pushd app/ui
+        rm -rf node_modules
+        popd
+
+  app-deploy:
+    desc: Deploy application to App Service.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ad
+    dir: app
+    cmds:
+      - |
+        echo -e "\033[0;32mUploading application...\033[0m"
+        TEMP_DIR=$(mktemp -d)
+        trap "rm -rf $TEMP_DIR" EXIT
+
+        cp -a api "$TEMP_DIR/"
+        rm -f "$TEMP_DIR/api/common"
+        cp -a ../common "$TEMP_DIR/api/common"
+        pushd $TEMP_DIR/api
+        zip -q -r --symlinks "$TEMP_DIR/app.zip" * -x "*/.venv/*" -x "*/__pycache__/*"
+        popd
+
+        pushd ../infra
+        RESOURCE_GROUP=$(terraform output -raw resource_group)
+        APP_NAME=$(terraform output -raw webapp_name)
+        popd
+
+        ZIP_PATH="$TEMP_DIR/app.zip"
+        az webapp deploy \
+            -g $RESOURCE_GROUP \
+            -n $APP_NAME \
+            --src-path "$ZIP_PATH" \
+            --type zip
+
+  app-logs:
+    desc: Show application logs.
+    silent: true
+    aliases:
+      - al
+    dir: infra
+    cmds:
+      - |
+        echo -e "\033[0;32mShowing logs...\033[0m"
+        az webapp log tail -g $(terraform output -raw resource_group) -n $(terraform output -raw webapp_name)
+
+  api-run:
+    desc: Launch local API instance.
+    silent: true
+    deps:
+      - task: deps-setup
+    aliases:
+      - ar
+    dir: app/api
+    cmds:
+      - |
+        echo -e "\033[0;32mLaunching API...\033[0m"
+        .venv/bin/python3 -m uvicorn main:app --reload

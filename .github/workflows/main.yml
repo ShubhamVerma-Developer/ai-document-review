@@ -1,0 +1,98 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  infra:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    if: false
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Toolchain
+        uses: ./.github/actions/setup
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Authenticate Environment
+        id: infra-auth
+        run: az login --identity
+
+      - name: Deploy Infrastructure
+        id: infra-deploy
+        run: task infra-deploy
+
+      - name: Destroy Infrastructure
+        id: infra-destroy
+        run: task infra-destroy
+
+  app:
+    name: Application
+    runs-on: ubuntu-latest
+
+    env:
+      SKIP_DEPS_SETUP: true
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Toolchain
+        uses: ./.github/actions/setup
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Application
+        id: app-build
+        run: task app-build
+        env:
+          CI: false
+
+  flow:
+    name: Flow
+    runs-on: ubuntu-latest
+    if: false
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Toolchain
+        uses: ./.github/actions/setup
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Flows
+        id: flow-build
+        run: task flow-build
+
+      - name: Deploy Agent Flows
+        id: flow-create-agent
+        run: task flow-create-agent
+
+      - name: Deploy Evaluation Flows
+        id: flow-create-eval
+        run: task flow-create-eval
+
+      - name: Deploy Review Flows
+        id: flow-create-review
+        run: task flow-create-review
+
+      - name: Deploy ML Endpoints
+        id: flow-deploy
+        run: task flow-deploy
