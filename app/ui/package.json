@@ -48,7 +48,7 @@
     "@tsconfig/node20": "^20.1.4",
     "@types/node": "^22.10.9",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.18.0",
+    "eslint": "^9.23.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
